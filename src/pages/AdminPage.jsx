@@ -359,8 +359,8 @@ function UsersTab() {
     }
     setSaving(true)
     try {
-      const bcrypt = await import('bcryptjs')
-      const pin_hash = await bcrypt.hash(form.pin, 10)
+      // server-side hashing
+      const { data: pin_hash } = await supabase.rpc('hash_pin', { input_pin: form.pin })
       const { error } = await supabase.from('users').insert({
         username: form.username.trim(),
         pin_hash,
