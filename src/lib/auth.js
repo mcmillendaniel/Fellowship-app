@@ -3,6 +3,8 @@ import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
 
+// Browser-compatible PIN verification using Supabase's pgcrypto
+// We verify by asking Supabase to check the hash server-side
 async function verifyPin(pin, hash) {
   const { data, error } = await supabase.rpc('verify_pin', {
     input_pin: pin,
@@ -30,9 +32,12 @@ export function AuthProvider({ children }) {
       .select('*')
       .ilike('username', username.trim())
       .single()
+
     if (error || !data) throw new Error('Username not found')
+
     const match = await verifyPin(pin, data.pin_hash)
     if (!match) throw new Error('Incorrect PIN')
+
     localStorage.setItem('fellowship_user', JSON.stringify(data))
     setUser(data)
     return data

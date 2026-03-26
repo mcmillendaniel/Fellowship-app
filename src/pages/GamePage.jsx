@@ -251,9 +251,7 @@ function TasksSection() {
 }
 
 function TaskCard({ task, submission, uploading, onSubmit, showSubmit, onToggleSubmit }) {
-  const fileRef = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
-  const fileInputRef = useState(null)
 
   const statusColor = !submission ? 'badge-sky' :
     submission.status === 'approved' ? 'badge-approved' :

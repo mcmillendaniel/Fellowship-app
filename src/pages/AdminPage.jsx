@@ -289,7 +289,6 @@ function AlertTab() {
   const toast = useToast()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
-  const [{ id: adminId }] = [JSON.parse(localStorage.getItem('fellowship_user') || '{}')]
 
   const sendAlert = async () => {
     if (!message.trim()) return
@@ -359,11 +358,11 @@ function UsersTab() {
     }
     setSaving(true)
     try {
-      // server-side hashing
-      const { data: pin_hash } = await supabase.rpc('hash_pin', { input_pin: form.pin })
+      const { data: hashData, error: hashError } = await supabase.rpc('hash_pin', { input_pin: form.pin })
+      if (hashError) throw hashError
       const { error } = await supabase.from('users').insert({
         username: form.username.trim(),
-        pin_hash,
+        pin_hash: hashData,
         team: form.team,
         is_admin: false,
       })
