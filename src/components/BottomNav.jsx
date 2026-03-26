@@ -88,7 +88,7 @@ const styles = {
     background: 'rgba(255,255,255,0.97)',
     borderTop: '1px solid rgba(123,184,212,0.2)',
     boxShadow: '0 -4px 20px rgba(74,107,138,0.08)',
-    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    paddingBottom: 'env(safe-area-inset-bottom, 16px)',
     flexShrink: 0,
   },
   navBtn: {
