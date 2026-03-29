@@ -63,7 +63,7 @@ function TriviaSection() {
     })
 
     setAnswered(prev => ({ ...prev, [question.id]: { selected_answer: choice, is_correct: isCorrect } }))
-    toast(`✨ Correct! +${xp} Stars`, 'success')
+    if (isCorrect) toast(`✨ Correct! +${xp} Stars`, 'success')
     else toast('Not quite! Better luck next one.', 'error')
   }
 
