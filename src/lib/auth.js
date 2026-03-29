@@ -38,6 +38,7 @@ export function AuthProvider({ children }) {
     const match = await verifyPin(pin, data.pin_hash)
     if (!match) throw new Error('Incorrect PIN')
 
+    await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', data.id)
     localStorage.setItem('fellowship_user', JSON.stringify(data))
     setUser(data)
     return data

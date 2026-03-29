@@ -63,7 +63,7 @@ function TriviaSection() {
     })
 
     setAnswered(prev => ({ ...prev, [question.id]: { selected_answer: choice, is_correct: isCorrect } }))
-    if (isCorrect) toast(`✨ Correct! +${xp} XP`, 'success')
+    toast(`✨ Correct! +${xp} ⭐️`, 'success')
     else toast('Not quite! Better luck next one.', 'error')
   }
 
@@ -233,7 +233,7 @@ function TasksSection() {
   return (
     <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <p style={{ fontSize: 13, color: '#8DA4B4', textAlign: 'center' }}>
-        Complete quests, submit proof, earn XP ✨
+        Complete quests, submit proof, earn ⭐️
       </p>
       {tasks.map(task => (
         <TaskCard
@@ -258,7 +258,7 @@ function TaskCard({ task, submission, uploading, onSubmit, showSubmit, onToggleS
     submission.status === 'rejected' ? 'badge-rejected' : 'badge-pending'
 
   const statusText = !submission ? 'Not started' :
-    submission.status === 'approved' ? `✓ Approved (+${submission.xp_awarded} XP)` :
+    submission.status === 'approved' ? `✓ Approved (+${submission.xp_awarded} ⭐️)` :
     submission.status === 'rejected' ? 'Needs retry' : '⏳ Pending review'
 
   return (
@@ -266,7 +266,7 @@ function TaskCard({ task, submission, uploading, onSubmit, showSubmit, onToggleS
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-            <span style={styles.xpBadge}>⭐ {task.xp_value} XP</span>
+            <span style={styles.xpBadge}>⭐️ {task.xp_value} ⭐️</span>
             {task.requires_photo && <span className="badge badge-sky" style={{ fontSize: 10 }}>📸 Photo</span>}
           </div>
           <p style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50', lineHeight: 1.35, marginBottom: 4 }}>{task.title}</p>

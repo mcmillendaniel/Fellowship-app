@@ -18,19 +18,19 @@ export default function LeaderboardPage() {
     if (!users) { setLoading(false); return }
 
     const [triviaRes, taskRes] = await Promise.all([
-      supabase.from('trivia_answers').select('user_id, xp_awarded'),
-      supabase.from('task_submissions').select('user_id, xp_awarded').eq('status', 'approved'),
+      supabase.from('trivia_answers').select('user_id, stars_awarded'),
+      supabase.from('task_submissions').select('user_id, stars_awarded').eq('status', 'approved'),
     ])
 
-    const xpMap = {}
-    users.forEach(u => { xpMap[u.id] = { ...u, triviaXP: 0, taskXP: 0 } })
+    const starsMap = {}
+    users.forEach(u => { starsMap[u.id] = { ...u, trivia⭐: 0, task⭐: 0 } })
 
-    triviaRes.data?.forEach(a => { if (xpMap[a.user_id]) xpMap[a.user_id].triviaXP += a.xp_awarded || 0 })
-    taskRes.data?.forEach(s => { if (xpMap[s.user_id]) xpMap[s.user_id].taskXP += s.xp_awarded || 0 })
+    triviaRes.data?.forEach(a => { if (xpMap[a.user_id]) starsMap[a.user_id].trivia⭐ += a.xp_awarded || 0 })
+    taskRes.data?.forEach(s => { if (xpMap[s.user_id]) starsMap[s.user_id].task⭐ += s.xp_awarded || 0 })
 
     const ranked = Object.values(xpMap)
-      .map(u => ({ ...u, totalXP: u.triviaXP + u.taskXP }))
-      .sort((a, b) => b.totalXP - a.totalXP)
+      .map(u => ({ ...u, total⭐: u.trivia⭐ + u.task⭐ }))
+      .sort((a, b) => b.total⭐ - a.total⭐)
 
     setRankings(ranked)
     setLoading(false)
@@ -50,7 +50,7 @@ export default function LeaderboardPage() {
           <div style={{ textAlign: 'center', padding: '60px 20px' }}>
             <div style={{ fontSize: 48 }}>🏆</div>
             <p style={{ fontWeight: 700, color: '#4A6B8A', marginTop: 12 }}>Rankings will appear here</p>
-            <p style={{ fontSize: 13, color: '#8DA4B4', marginTop: 4 }}>Play trivia and complete quests to earn XP!</p>
+            <p style={{ fontSize: 13, color: '#8DA4B4', marginTop: 4 }}>Play trivia and complete quests to earn ⭐!</p>
           </div>
         ) : (
           <div style={{ padding: 16 }}>
@@ -72,14 +72,14 @@ export default function LeaderboardPage() {
               </div>
             )}
 
-            {/* XP breakdown info */}
+            {/* ⭐ breakdown info */}
             <div style={styles.infoCard}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', marginBottom: 6 }}>How to earn XP</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', marginBottom: 6 }}>How to earn ⭐</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <XPRow icon="🧠" label="Easy trivia" value="+50" />
-                <XPRow icon="🧠" label="Medium trivia" value="+100" />
-                <XPRow icon="🧠" label="Hard trivia" value="+150" />
-                <XPRow icon="⭐" label="Quest completion" value="Varies" />
+                <⭐Row icon="🧠" label="Easy trivia" value="1 ⭐" />
+                <⭐Row icon="🧠" label="Medium trivia" value="2 ⭐" />
+                <⭐Row icon="🧠" label="Hard trivia" value="3 ⭐" />
+                <⭐Row icon="⭐" label="Quest completion" value="Varies" />
               </div>
             </div>
           </div>
@@ -109,7 +109,7 @@ function PodiumSpot({ rank, entry, isMe }) {
       <span style={{ fontSize: rank === 1 ? 13 : 12, fontWeight: 700, color: '#2C3E50', fontFamily: 'Lato', marginBottom: 2 }}>
         {entry.username}{isMe ? ' 👈' : ''}
       </span>
-      <span style={{ fontSize: 12, color: '#8DA4B4', marginBottom: 6 }}>{entry.totalXP} XP</span>
+      <span style={{ fontSize: 12, color: '#8DA4B4', marginBottom: 6 }}>{entry.total⭐} ⭐</span>
       <div style={{
         height: heights[rank],
         width: '100%',
@@ -143,14 +143,14 @@ function RankRow({ rank, entry, isMe }) {
         {entry.username}{isMe ? ' (you)' : ''}
       </span>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#4A6B8A' }}>{entry.totalXP} XP</div>
-        <div style={{ fontSize: 10, color: '#8DA4B4' }}>{entry.triviaXP}T · {entry.taskXP}Q</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#4A6B8A' }}>{entry.total⭐} ⭐</div>
+        <div style={{ fontSize: 10, color: '#8DA4B4' }}>{entry.trivia⭐}T · {entry.task⭐}Q</div>
       </div>
     </div>
   )
 }
 
-function XPRow({ icon, label, value }) {
+function ⭐Row({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ fontSize: 13, color: '#546E7A' }}>{icon} {label}</span>
