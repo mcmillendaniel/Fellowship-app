@@ -29,8 +29,8 @@ export default function LeaderboardPage() {
     taskRes.data?.forEach(s => { if (xpMap[s.user_id]) starsMap[s.user_id].task += s.xp_awarded || 0 })
 
     const ranked = Object.values(xpMap)
-      .map(u => ({ ...u, total⭐: u.trivia + u.task }))
-      .sort((a, b) => b.total⭐ - a.total⭐)
+      .map(u => ({ ...u, total: u.trivia + u.task }))
+      .sort((a, b) => b.total - a.total)
 
     setRankings(ranked)
     setLoading(false)
@@ -109,7 +109,7 @@ function PodiumSpot({ rank, entry, isMe }) {
       <span style={{ fontSize: rank === 1 ? 13 : 12, fontWeight: 700, color: '#2C3E50', fontFamily: 'Lato', marginBottom: 2 }}>
         {entry.username}{isMe ? ' 👈' : ''}
       </span>
-      <span style={{ fontSize: 12, color: '#8DA4B4', marginBottom: 6 }}>{entry.total⭐} ⭐</span>
+      <span style={{ fontSize: 12, color: '#8DA4B4', marginBottom: 6 }}>{entry.total} ⭐</span>
       <div style={{
         height: heights[rank],
         width: '100%',
@@ -143,7 +143,7 @@ function RankRow({ rank, entry, isMe }) {
         {entry.username}{isMe ? ' (you)' : ''}
       </span>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#4A6B8A' }}>{entry.total⭐} ⭐</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#4A6B8A' }}>{entry.total} ⭐</div>
         <div style={{ fontSize: 10, color: '#8DA4B4' }}>{entry.trivia}T · {entry.task}Q</div>
       </div>
     </div>
