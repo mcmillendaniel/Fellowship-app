@@ -23,13 +23,13 @@ export default function LeaderboardPage() {
     ])
 
     const starsMap = {}
-    users.forEach(u => { starsMap[u.id] = { ...u, trivia⭐: 0, task⭐: 0 } })
+    users.forEach(u => { starsMap[u.id] = { ...u, trivia: 0, task: 0 } })
 
-    triviaRes.data?.forEach(a => { if (xpMap[a.user_id]) starsMap[a.user_id].trivia⭐ += a.xp_awarded || 0 })
-    taskRes.data?.forEach(s => { if (xpMap[s.user_id]) starsMap[s.user_id].task⭐ += s.xp_awarded || 0 })
+    triviaRes.data?.forEach(a => { if (xpMap[a.user_id]) starsMap[a.user_id].trivia += a.xp_awarded || 0 })
+    taskRes.data?.forEach(s => { if (xpMap[s.user_id]) starsMap[s.user_id].task += s.xp_awarded || 0 })
 
     const ranked = Object.values(xpMap)
-      .map(u => ({ ...u, total⭐: u.trivia⭐ + u.task⭐ }))
+      .map(u => ({ ...u, total⭐: u.trivia + u.task }))
       .sort((a, b) => b.total⭐ - a.total⭐)
 
     setRankings(ranked)
@@ -144,7 +144,7 @@ function RankRow({ rank, entry, isMe }) {
       </span>
       <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#4A6B8A' }}>{entry.total⭐} ⭐</div>
-        <div style={{ fontSize: 10, color: '#8DA4B4' }}>{entry.trivia⭐}T · {entry.task⭐}Q</div>
+        <div style={{ fontSize: 10, color: '#8DA4B4' }}>{entry.trivia}T · {entry.task}Q</div>
       </div>
     </div>
   )
