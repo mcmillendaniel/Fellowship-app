@@ -76,10 +76,10 @@ export default function LeaderboardPage() {
             <div style={styles.infoCard}>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', marginBottom: 6 }}>How to earn ⭐</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <⭐Row icon="🧠" label="Easy trivia" value="1 ⭐" />
-                <⭐Row icon="🧠" label="Medium trivia" value="2 ⭐" />
-                <⭐Row icon="🧠" label="Hard trivia" value="3 ⭐" />
-                <⭐Row icon="⭐" label="Quest completion" value="Varies" />
+                <StarRow icon="🧠" label="Easy trivia" value="1 ⭐" />
+                <StarRow icon="🧠" label="Medium trivia" value="2 ⭐" />
+                <StarRow icon="🧠" label="Hard trivia" value="3 ⭐" />
+                <StarRow icon="⭐" label="Quest completion" value="Varies" />
               </div>
             </div>
           </div>
@@ -150,7 +150,7 @@ function RankRow({ rank, entry, isMe }) {
   )
 }
 
-function ⭐Row({ icon, label, value }) {
+function StarRow({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <span style={{ fontSize: 13, color: '#546E7A' }}>{icon} {label}</span>
