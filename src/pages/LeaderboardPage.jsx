@@ -25,10 +25,10 @@ export default function LeaderboardPage() {
     const starsMap = {}
     users.forEach(u => { starsMap[u.id] = { ...u, trivia: 0, task: 0 } })
 
-    triviaRes.data?.forEach(a => { if (xpMap[a.user_id]) starsMap[a.user_id].trivia += a.xp_awarded || 0 })
-    taskRes.data?.forEach(s => { if (xpMap[s.user_id]) starsMap[s.user_id].task += s.xp_awarded || 0 })
+    triviaRes.data?.forEach(a => { if (starsMap[a.user_id]) starsMap[a.user_id].trivia += a.stars_awarded || 0 })
+    taskRes.data?.forEach(s => { if (starsMap[s.user_id]) starsMap[s.user_id].task += s.stars_awarded || 0 })
 
-    const ranked = Object.values(xpMap)
+    const ranked = Object.values(starsMap)
       .map(u => ({ ...u, total: u.trivia + u.task }))
       .sort((a, b) => b.total - a.total)
 
