@@ -57,7 +57,7 @@ function SubmissionsTab() {
 
   const review = async (id, taskId, userId, status, xp) => {
     await supabase.from('task_submissions').update({ status, xp_awarded: status === 'approved' ? xp : 0 }).eq('id', id)
-    toast(status === 'approved' ? `✅ Approved! +${xp} XP awarded` : '❌ Rejected', status === 'approved' ? 'success' : 'error')
+    toast(status === 'approved' ? `✅ Approved! +${xp} ⭐ awarded` : '❌ Rejected', status === 'approved' ? 'success' : 'error')
     setSubmissions(s => s.filter(x => x.id !== id))
   }
 
@@ -87,7 +87,7 @@ function SubmissionsTab() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-              <span style={{ fontSize: 13, color: '#546E7A', fontWeight: 600 }}>XP:</span>
+              <span style={{ fontSize: 13, color: '#546E7A', fontWeight: 600 }}>Stars:</span>
               <input
                 className="input"
                 type="number"
@@ -156,7 +156,7 @@ function TasksTab() {
         <input className="input" placeholder="Quest title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} style={{ marginBottom: 10 }} />
         <textarea className="input" placeholder="Description (optional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'none', marginBottom: 10 }} rows={2} />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-          <label style={{ fontSize: 13, color: '#546E7A', fontWeight: 600, whiteSpace: 'nowrap' }}>XP value:</label>
+          <label style={{ fontSize: 13, color: '#546E7A', fontWeight: 600, whiteSpace: 'nowrap' }}>Stars:</label>
           <input className="input" type="number" value={form.xp_value} onChange={e => setForm(f => ({ ...f, xp_value: parseInt(e.target.value) || 0 }))} style={{ width: 90 }} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#546E7A', fontWeight: 600, marginLeft: 'auto' }}>
             <input type="checkbox" checked={form.requires_photo} onChange={e => setForm(f => ({ ...f, requires_photo: e.target.checked }))} />
@@ -176,7 +176,7 @@ function TasksTab() {
               <p style={{ fontWeight: 700, fontSize: 14, color: '#2C3E50' }}>{task.title}</p>
               {task.description && <p style={{ fontSize: 12, color: '#8DA4B4', marginTop: 2 }}>{task.description}</p>}
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#B8600A', background: '#FFF5E6', padding: '2px 6px', borderRadius: 4 }}>⭐ {task.xp_value} XP</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#B8600A', background: '#FFF5E6', padding: '2px 6px', borderRadius: 4 }}>⭐ {task.xp_value}</span>
                 {task.requires_photo && <span style={{ fontSize: 11, color: '#7BB8D4', background: '#E8F4FA', padding: '2px 6px', borderRadius: 4 }}>📸</span>}
                 <span style={{ fontSize: 11, color: task.is_active ? '#27AE60' : '#8DA4B4', background: task.is_active ? '#EAF5EA' : '#F5F5F5', padding: '2px 6px', borderRadius: 4 }}>
                   {task.is_active ? 'Active' : 'Hidden'}
@@ -250,9 +250,9 @@ function TriviaTab() {
         <p style={{ fontSize: 11, color: '#8DA4B4', marginBottom: 10 }}>Tap a letter to mark correct answer (currently: {form.correct_answer.toUpperCase()})</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           <select className="input" value={form.difficulty} onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))} style={{ flex: 1 }}>
-            <option value="easy">Easy (+50 XP)</option>
-            <option value="medium">Medium (+100 XP)</option>
-            <option value="hard">Hard (+150 XP)</option>
+            <option value="easy">Easy (+1 ⭐)</option>
+            <option value="medium">Medium (+2 ⭐)</option>
+            <option value="hard">Hard (+3 ⭐)</option>
           </select>
           <select className="input" value={form.about} onChange={e => setForm(f => ({ ...f, about: e.target.value }))} style={{ flex: 1 }}>
             <option value="kevin">About Kevin</option>
