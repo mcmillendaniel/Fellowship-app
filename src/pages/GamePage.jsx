@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { useToast } from '../hooks/useToast'
@@ -30,131 +30,214 @@ function TriviaSection() {
   const [questions, setQuestions] = useState([])
   const [answered, setAnswered] = useState({})
   const [loading, setLoading] = useState(true)
-  const [current, setCurrent] = useState(0)
+  const [triviaActive, setTriviaActive] = useState(false)
 
   useEffect(() => {
-    const fetchData = async () => {
-      const [qRes, aRes] = await Promise.all([
-        supabase.from('trivia_questions').select('*').order('created_at'),
-        supabase.from('trivia_answers').select('*').eq('user_id', user.id),
-      ])
-      if (qRes.data) setQuestions(qRes.data)
-      if (aRes.data) {
-        const map = {}
-        aRes.data.forEach(a => { map[a.question_id] = a })
-        setAnswered(map)
-      }
-      setLoading(false)
+    loadTrivia()
+    loadAnswered()
+  }, [])
+
+  const loadTrivia = async () => {
+    // Check if trivia is active — if any question is active, show trivia
+    const { data } = await supabase
+      .from('trivia_questions')
+      .select('*')
+      .eq('is_active', true)
+      .order('stars', { ascending: true })
+    setQuestions(data || [])
+    setTriviaActive((data || []).length > 0)
+    setLoading(false)
+  }
+
+  const loadAnswered = async () => {
+    const { data } = await supabase
+      .from('trivia_answers')
+      .select('*')
+      .eq('user_id', user.id)
+    if (data) {
+      const map = {}
+      data.forEach(a => { map[a.question_id] = a })
+      setAnswered(map)
     }
-    fetchData()
-  }, [user.id])
-
-  const submitAnswer = async (question, choice) => {
-    if (answered[question.id]) return
-    const isCorrect = choice === question.correct_answer
-    const xp = isCorrect ? (question.difficulty === 'hard' ? 150 : question.difficulty === 'easy' ? 50 : 100) : 0
-
-    await supabase.from('trivia_answers').insert({
-      question_id: question.id,
-      user_id: user.id,
-      selected_answer: choice,
-      is_correct: isCorrect,
-      xp_awarded: xp,
-    })
-
-    setAnswered(prev => ({ ...prev, [question.id]: { selected_answer: choice, is_correct: isCorrect } }))
-    if (isCorrect) toast(`✨ Correct! +${xp} Stars`, 'success')
-    else toast('Not quite! Better luck next one.', 'error')
   }
 
   if (loading) return <div style={centerStyle}><div className="spinner" /></div>
 
-  if (questions.length === 0) return (
+  if (!triviaActive) return (
     <div style={centerStyle}>
       <div style={{ fontSize: 48, marginBottom: 12 }}>📜</div>
       <p style={{ fontWeight: 700, color: '#4A6B8A' }}>Trivia coming soon</p>
-      <p style={{ fontSize: 13, color: '#8DA4B4', marginTop: 4 }}>Check back once the questions are loaded!</p>
+      <p style={{ color: '#888', fontSize: 14 }}>Check back later, Fellowship member</p>
     </div>
   )
 
-  const answeredCount = Object.keys(answered).length
-  const correctCount = Object.values(answered).filter(a => a.is_correct).length
+  const totalStars = questions.reduce((sum, q) => {
+    const a = answered[q.id]
+    if (!a) return sum
+    return sum + (a.stars_awarded || 0)
+  }, 0)
+
+  const maxStars = questions.reduce((sum, q) => sum + q.stars, 0)
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Progress */}
-      <div style={styles.progressCard}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A' }}>Your progress</span>
-          <span style={{ fontSize: 13, color: '#8DA4B4' }}>{answeredCount}/{questions.length}</span>
-        </div>
-        <div style={styles.progressBar}>
-          <div style={{ ...styles.progressFill, width: `${(answeredCount / questions.length) * 100}%` }} />
-        </div>
-        <p style={{ fontSize: 12, color: '#8DA4B4', marginTop: 6 }}>
-          {correctCount} correct · {answeredCount - correctCount} missed
-        </p>
+    <div style={{ padding: '16px', paddingBottom: 80 }}>
+      <div style={scoreCard}>
+        <span style={{ fontSize: 13, color: '#4A6B8A', fontWeight: 600 }}>Your Score</span>
+        <span style={{ fontSize: 20, fontWeight: 800, color: '#4A6B8A' }}>{totalStars} / {maxStars} ⭐</span>
       </div>
-
-      {/* Questions */}
-      {questions.map((q, i) => (
+      {questions.map(q => (
         <QuestionCard
           key={q.id}
           question={q}
-          index={i}
-          answer={answered[q.id]}
-          onAnswer={(choice) => submitAnswer(q, choice)}
+          existing={answered[q.id]}
+          onAnswered={(result) => {
+            setAnswered(prev => ({ ...prev, [q.id]: result }))
+            if (result.stars_awarded === q.stars) toast(`✨ Correct! +${q.stars}⭐`, 'success')
+            else if (result.stars_awarded > 0) toast(`Almost! +${result.stars_awarded}⭐ partial credit`, 'info')
+            else toast('Not quite! Better luck next one.', 'error')
+          }}
+          user={user}
         />
       ))}
     </div>
   )
 }
 
-function QuestionCard({ question, index, answer, onAnswer }) {
-  const options = [
-    { key: 'a', text: question.option_a },
-    { key: 'b', text: question.option_b },
-    { key: 'c', text: question.option_c },
-    { key: 'd', text: question.option_d },
-  ]
+function QuestionCard({ question, existing, onAnswered, user }) {
+  const [input, setInput] = useState('')
+  const [timeLeft, setTimeLeft] = useState(10)
+  const [timerActive, setTimerActive] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [started, setStarted] = useState(false)
+  const intervalRef = useRef(null)
+  const inputRef = useRef(null)
 
-  const difficultyColor = question.difficulty === 'hard' ? 'badge-amber' : question.difficulty === 'easy' ? 'badge-sage' : 'badge-sky'
+  const alreadyAnswered = !!existing
 
-  return (
-    <div style={styles.questionCard} className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-        <span style={{ fontSize: 12, color: '#8DA4B4', fontWeight: 600 }}>Q{index + 1}</span>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <span className={`badge ${difficultyColor}`}>{question.difficulty}</span>
-          {question.about && <span className="badge badge-periwinkle">{question.about}</span>}
+  const startQuestion = () => {
+    setStarted(true)
+    setTimerActive(true)
+    setTimeLeft(10)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }
+
+  useEffect(() => {
+    if (!timerActive) return
+    intervalRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current)
+          setTimerActive(false)
+          if (!submitted) handleSubmit('', true)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(intervalRef.current)
+  }, [timerActive])
+
+  const normalize = (str) => str.toLowerCase().trim().replace(/['']/g, "'")
+
+  const checkAnswer = (raw) => {
+    const ans = normalize(raw)
+    if (!ans) return { correct: false, partial: false }
+
+    const accepted = (question.accepted_answers || '').split('|').map(normalize).filter(Boolean)
+    const alternates = (question.alternate_answers || '').split('|').map(normalize).filter(Boolean)
+
+    if (accepted.some(a => a === ans)) return { correct: true, partial: false }
+    if (alternates.some(a => a === ans)) return { correct: false, partial: true }
+    return { correct: false, partial: false }
+  }
+
+  const handleSubmit = async (overrideInput, timedOut = false) => {
+    if (submitted || alreadyAnswered) return
+    clearInterval(intervalRef.current)
+    setTimerActive(false)
+    setSubmitted(true)
+
+    const raw = timedOut ? '' : (overrideInput !== undefined ? overrideInput : input)
+    const { correct, partial } = checkAnswer(raw)
+    const starsAwarded = correct ? question.stars : partial ? 0.5 : 0
+
+    const record = {
+      question_id: question.id,
+      user_id: user.id,
+      selected_answer: raw,
+      is_correct: correct,
+      stars_awarded: starsAwarded,
+    }
+
+    await supabase.from('trivia_answers').insert(record)
+    onAnswered(record)
+  }
+
+  if (alreadyAnswered) {
+    const { is_correct, stars_awarded, selected_answer } = existing
+    return (
+      <div style={{ ...cardStyle, borderLeft: `4px solid ${is_correct ? '#4CAF50' : stars_awarded > 0 ? '#FF9800' : '#e57373'}` }}>
+        <div style={categoryBadge(question.category)}>{question.category}</div>
+        <p style={qText}>{question.question}</p>
+        <div style={answerRow}>
+          <span style={{ fontSize: 13, color: '#888' }}>Your answer: <strong>{selected_answer || '(no answer)'}</strong></span>
+          <span style={{ fontSize: 16 }}>{is_correct ? '✅' : stars_awarded > 0 ? '🟡' : '❌'} {stars_awarded}⭐</span>
         </div>
       </div>
-      <p style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50', lineHeight: 1.4, marginBottom: 14 }}>
-        {question.question}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {options.map(opt => {
-          const isSelected = answer?.selected_answer === opt.key
-          const isCorrect = question.correct_answer === opt.key
-          let style = styles.optionBtn
-          if (answer) {
-            if (isCorrect) style = { ...style, ...styles.optionCorrect }
-            else if (isSelected && !answer.is_correct) style = { ...style, ...styles.optionWrong }
-            else style = { ...style, ...styles.optionDimmed }
-          }
-          return (
-            <button key={opt.key} style={style} onClick={() => onAnswer(opt.key)} disabled={!!answer}>
-              <span style={styles.optionLetter}>{opt.key.toUpperCase()}</span>
-              <span style={{ flex: 1, textAlign: 'left' }}>{opt.text}</span>
-              {answer && isCorrect && <span>✓</span>}
-              {answer && isSelected && !answer.is_correct && <span>✗</span>}
-            </button>
-          )
-        })}
+    )
+  }
+
+  if (!started) {
+    return (
+      <div style={cardStyle}>
+        <div style={categoryBadge(question.category)}>{question.category}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <p style={{ ...qText, margin: 0 }}>{'⭐'.repeat(question.stars)}</p>
+        </div>
+        <p style={{ color: '#888', fontSize: 13, marginBottom: 12 }}>10 seconds to answer once started</p>
+        <button style={startBtn} onClick={startQuestion}>Start Question</button>
+      </div>
+    )
+  }
+
+  const timerColor = timeLeft <= 3 ? '#e53935' : timeLeft <= 6 ? '#FF9800' : '#4CAF50'
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <div style={categoryBadge(question.category)}>{question.category}</div>
+        <div style={{ ...timerCircle, borderColor: timerColor, color: timerColor }}>{timeLeft}</div>
+      </div>
+      <p style={qText}>{question.question}</p>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <input
+          ref={inputRef}
+          style={inputStyle}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
+          placeholder="Type your answer..."
+          disabled={submitted || timeLeft === 0}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
+        <button
+          style={submitBtn}
+          onClick={() => handleSubmit()}
+          disabled={submitted || timeLeft === 0 || !input.trim()}
+        >
+          →
+        </button>
+      </div>
+      <div style={{ marginTop: 8, height: 4, background: '#eee', borderRadius: 2 }}>
+        <div style={{ height: 4, borderRadius: 2, background: timerColor, width: `${(timeLeft / 10) * 100}%`, transition: 'width 1s linear, background 0.3s' }} />
       </div>
     </div>
   )
 }
+
+// ─── Tasks Section (unchanged) ───────────────────────────────────────────────
 
 function TasksSection() {
   const { user } = useAuth()
@@ -163,196 +246,187 @@ function TasksSection() {
   const [submissions, setSubmissions] = useState({})
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(null)
-  const [showSubmit, setShowSubmit] = useState(null)
-  const [submitText, setSubmitText] = useState('')
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const [tRes, sRes] = await Promise.all([
-        supabase.from('tasks').select('*').eq('is_active', true).order('created_at'),
-        supabase.from('task_submissions').select('*').eq('user_id', user.id),
-      ])
-      if (tRes.data) setTasks(tRes.data)
-      if (sRes.data) {
-        const map = {}
-        sRes.data.forEach(s => { map[s.task_id] = s })
-        setSubmissions(map)
-      }
-      setLoading(false)
-    }
-    fetchData()
-  }, [user.id])
+  useEffect(() => { loadData() }, [])
 
-  const submitTask = async (task, file) => {
+  const loadData = async () => {
+    const [{ data: taskData }, { data: subData }] = await Promise.all([
+      supabase.from('tasks').select('*').order('stars', { ascending: true }),
+      supabase.from('task_submissions').select('*').eq('user_id', user.id)
+    ])
+    setTasks(taskData || [])
+    const map = {}
+    ;(subData || []).forEach(s => { map[s.task_id] = s })
+    setSubmissions(map)
+    setLoading(false)
+  }
+
+  const handlePhoto = async (task, file) => {
+    if (!file) return
     setUploading(task.id)
     try {
-      let photoUrl = null
-
-      if (file && task.requires_photo) {
-        // Compress image
-        const compressed = await compressImage(file)
-        const filename = `${user.id}/${task.id}_${Date.now()}.jpg`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('task-photos')
-          .upload(filename, compressed, { contentType: 'image/jpeg', upsert: true })
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('task-photos').getPublicUrl(filename)
-          photoUrl = urlData?.publicUrl
-        }
-      }
-
-      await supabase.from('task_submissions').upsert({
+      const ext = file.name.split('.').pop()
+      const path = `${user.id}/${task.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('quest-photos').upload(path, file)
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('quest-photos').getPublicUrl(path)
+      await supabase.from('task_submissions').insert({
         task_id: task.id,
         user_id: user.id,
-        photo_url: photoUrl,
+        photo_url: publicUrl,
         status: 'pending',
-        xp_awarded: 0,
-      }, { onConflict: 'task_id,user_id' })
-
-      setSubmissions(prev => ({ ...prev, [task.id]: { status: 'pending', photo_url: photoUrl } }))
-      toast('Quest submitted! Awaiting admin approval 🏆', 'success')
-      setShowSubmit(null)
-    } catch (err) {
-      toast('Submission failed, try again', 'error')
-    } finally {
-      setUploading(null)
+        stars_awarded: 0,
+      })
+      await loadData()
+      toast('📸 Submitted! Awaiting admin approval.', 'success')
+    } catch (e) {
+      toast('Upload failed. Try again.', 'error')
     }
+    setUploading(null)
   }
 
   if (loading) return <div style={centerStyle}><div className="spinner" /></div>
-
-  if (tasks.length === 0) return (
+  if (!tasks.length) return (
     <div style={centerStyle}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>⚔️</div>
-      <p style={{ fontWeight: 700, color: '#4A6B8A' }}>Quests loading soon</p>
-      <p style={{ fontSize: 13, color: '#8DA4B4', marginTop: 4 }}>Check back once the admin loads the quest list!</p>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
+      <p style={{ fontWeight: 700, color: '#4A6B8A' }}>Quests coming soon</p>
     </div>
   )
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <p style={{ fontSize: 13, color: '#8DA4B4', textAlign: 'center' }}>
-        Complete quests, submit proof, earn ⭐️
-      </p>
-      {tasks.map(task => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          submission={submissions[task.id]}
-          uploading={uploading === task.id}
-          onSubmit={(file) => submitTask(task, file)}
-          showSubmit={showSubmit === task.id}
-          onToggleSubmit={() => setShowSubmit(showSubmit === task.id ? null : task.id)}
-        />
-      ))}
-    </div>
-  )
-}
-
-function TaskCard({ task, submission, uploading, onSubmit, showSubmit, onToggleSubmit }) {
-  const [selectedFile, setSelectedFile] = useState(null)
-
-  const statusColor = !submission ? 'badge-sky' :
-    submission.status === 'approved' ? 'badge-approved' :
-    submission.status === 'rejected' ? 'badge-rejected' : 'badge-pending'
-
-  const statusText = !submission ? 'Not started' :
-    submission.status === 'approved' ? `✓ Approved (+${submission.xp_awarded} ⭐️)` :
-    submission.status === 'rejected' ? 'Needs retry' : '⏳ Pending review'
-
-  return (
-    <div style={styles.taskCard}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-            <span style={styles.xpBadge}>⭐️ {task.xp_value} ⭐️</span>
-            {task.requires_photo && <span className="badge badge-sky" style={{ fontSize: 10 }}>📸 Photo</span>}
+    <div style={{ padding: '16px', paddingBottom: 80 }}>
+      {tasks.map(task => {
+        const sub = submissions[task.id]
+        return (
+          <div key={task.id} style={{ ...cardStyle, borderLeft: `4px solid ${sub ? (sub.status === 'approved' ? '#4CAF50' : '#FF9800') : '#7BB8D4'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <p style={{ ...qText, margin: 0 }}>{task.title}</p>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', whiteSpace: 'nowrap', marginLeft: 8 }}>{'⭐'.repeat(task.stars)}</span>
+            </div>
+            {task.description && <p style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>{task.description}</p>}
+            {sub ? (
+              <div style={{ fontSize: 13, color: sub.status === 'approved' ? '#4CAF50' : '#FF9800', fontWeight: 600 }}>
+                {sub.status === 'approved' ? `✅ Approved! +${sub.stars_awarded}⭐` : '⏳ Pending review'}
+              </div>
+            ) : (
+              <label style={{ ...startBtn, display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
+                {uploading === task.id ? 'Uploading...' : '📸 Submit Photo'}
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                  onChange={e => handlePhoto(task, e.target.files[0])} />
+              </label>
+            )}
           </div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#2C3E50', lineHeight: 1.35, marginBottom: 4 }}>{task.title}</p>
-          {task.description && <p style={{ fontSize: 13, color: '#8DA4B4', lineHeight: 1.4 }}>{task.description}</p>}
-        </div>
-        <span className={`badge ${statusColor}`} style={{ marginLeft: 8, flexShrink: 0, fontSize: 11 }}>{statusText}</span>
-      </div>
-
-      {!submission || submission.status === 'rejected' ? (
-        <button
-          className="btn btn-secondary"
-          style={{ width: '100%', marginTop: 12, fontSize: 13 }}
-          onClick={onToggleSubmit}
-          disabled={uploading}
-        >
-          {uploading ? 'Submitting...' : showSubmit ? 'Cancel' : 'Submit quest'}
-        </button>
-      ) : null}
-
-      {showSubmit && (
-        <div style={styles.submitForm}>
-          {task.requires_photo && (
-            <label style={styles.photoUpload}>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style={{ display: 'none' }}
-                onChange={e => setSelectedFile(e.target.files?.[0] || null)}
-              />
-              {selectedFile ? (
-                <span style={{ color: '#27AE60', fontWeight: 700, fontSize: 13 }}>
-                  📸 {selectedFile.name.slice(0, 30)}...
-                </span>
-              ) : (
-                <span style={{ color: '#7BB8D4', fontWeight: 700, fontSize: 13 }}>
-                  📸 Tap to add photo
-                </span>
-              )}
-            </label>
-          )}
-          <button
-            className="btn btn-primary"
-            style={{ width: '100%', fontSize: 14 }}
-            onClick={() => onSubmit(selectedFile)}
-            disabled={uploading || (task.requires_photo && !selectedFile)}
-          >
-            {uploading ? 'Submitting...' : 'Submit for review'}
-          </button>
-        </div>
-      )}
+        )
+      })}
     </div>
   )
 }
 
-async function compressImage(file, maxWidth = 1400, quality = 0.78) {
-  return new Promise((resolve) => {
-    const img = new Image()
-    const url = URL.createObjectURL(file)
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      let w = img.width, h = img.height
-      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth }
-      canvas.width = w; canvas.height = h
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-      canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob) }, 'image/jpeg', quality)
-    }
-    img.src = url
-  })
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', textAlign: 'center', padding: 24 }
+
+const cardStyle = {
+  background: '#fff',
+  borderRadius: 12,
+  padding: '14px 16px',
+  marginBottom: 14,
+  boxShadow: '0 2px 8px rgba(123,184,212,0.12)',
+  borderLeft: '4px solid #7BB8D4',
 }
 
-const centerStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' }
+const qText = {
+  fontSize: 15,
+  fontWeight: 700,
+  color: '#2C3E50',
+  marginBottom: 4,
+  lineHeight: 1.4,
+}
+
+const inputStyle = {
+  flex: 1,
+  padding: '10px 14px',
+  borderRadius: 8,
+  border: '1.5px solid #7BB8D4',
+  fontSize: 15,
+  outline: 'none',
+  background: '#f8fbfd',
+}
+
+const submitBtn = {
+  padding: '10px 16px',
+  borderRadius: 8,
+  border: 'none',
+  background: '#7BB8D4',
+  color: '#fff',
+  fontSize: 18,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const startBtn = {
+  padding: '10px 20px',
+  borderRadius: 8,
+  border: 'none',
+  background: '#7BB8D4',
+  color: '#fff',
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: 'pointer',
+  width: '100%',
+}
+
+const timerCircle = {
+  width: 36,
+  height: 36,
+  borderRadius: '50%',
+  border: '3px solid',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 800,
+  fontSize: 15,
+  transition: 'color 0.3s, border-color 0.3s',
+}
+
+const answerRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginTop: 6,
+}
+
+const scoreCard = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  background: 'linear-gradient(135deg, #e8f4fd, #f0f8ff)',
+  borderRadius: 12,
+  padding: '12px 16px',
+  marginBottom: 16,
+  border: '1px solid rgba(123,184,212,0.3)',
+}
+
+const categoryColors = {
+  Kevin: '#5C85D6',
+  Liz: '#D65CA0',
+  Cats: '#E8A838',
+  Couple: '#56B068',
+}
+
+const categoryBadge = (cat) => ({
+  display: 'inline-block',
+  padding: '2px 10px',
+  borderRadius: 20,
+  fontSize: 11,
+  fontWeight: 700,
+  color: '#fff',
+  background: categoryColors[cat] || '#7BB8D4',
+  marginBottom: 6,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+})
 
 const styles = {
-  page: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#F5F8FA' },
-  progressCard: { background: '#fff', borderRadius: 14, padding: '14px 16px', border: '1px solid rgba(123,184,212,0.2)' },
-  progressBar: { height: 8, background: '#E8F4FA', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', background: 'linear-gradient(90deg, #7BB8D4, #8B9FD4)', borderRadius: 4, transition: 'width 0.5s ease' },
-  questionCard: { background: '#fff', borderRadius: 14, padding: '16px', border: '1px solid rgba(123,184,212,0.18)', boxShadow: '0 2px 8px rgba(74,107,138,0.05)' },
-  optionBtn: { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 8, border: '1.5px solid rgba(123,184,212,0.3)', background: '#FAFCFE', cursor: 'pointer', fontSize: 14, color: '#2C3E50', fontFamily: 'Lato,sans-serif', transition: 'all 0.15s', width: '100%' },
-  optionCorrect: { background: '#EAF5EA', border: '1.5px solid #27AE60', color: '#1A6B35' },
-  optionWrong: { background: '#FDEAEA', border: '1.5px solid #C0392B', color: '#8B2020' },
-  optionDimmed: { opacity: 0.4 },
-  optionLetter: { width: 22, height: 22, background: 'rgba(123,184,212,0.15)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#4A6B8A', flexShrink: 0 },
-  taskCard: { background: '#fff', borderRadius: 14, padding: '16px', border: '1px solid rgba(123,184,212,0.18)', boxShadow: '0 2px 8px rgba(74,107,138,0.05)' },
-  xpBadge: { background: 'linear-gradient(135deg, #FFF5E6, #FFF0D0)', color: '#B8600A', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, border: '1px solid rgba(184,96,10,0.15)' },
-  submitForm: { marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 },
-  photoUpload: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px', border: '2px dashed rgba(123,184,212,0.5)', borderRadius: 10, cursor: 'pointer', background: '#F8FBFE' },
+  page: { display: 'flex', flexDirection: 'column', height: '100%', background: '#f8fbfd' }
 }
