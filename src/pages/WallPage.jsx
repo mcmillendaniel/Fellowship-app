@@ -320,7 +320,7 @@ const styles = {
   composeFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingLeft: 46 },
   charCount: { fontSize: 12, color: '#8DA4B4' },
   feed: { flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0 },
-  postCard: { background: '#fff', borderRadius: 14, border: '1px solid rgba(123,184,212,0.18)', boxShadow: '0 2px 8px rgba(74,107,138,0.06)', padding: '14px 16px', overflow: 'hidden' },
+  postCard: { background: '#fff', borderRadius: 14, border: '1px solid rgba(123,184,212,0.18)', boxShadow: '0 2px 8px rgba(74,107,138,0.06)', padding: '14px 16px', overflow: 'hidden', flexShrink: 0 },
   pinnedCard: { border: '1px solid rgba(123,184,212,0.4)', background: '#F8FBFE' },
   alertCard: { border: '1px solid rgba(139,159,212,0.5)', background: 'linear-gradient(135deg, #F0F4FF 0%, #F8FBFE 100%)' },
   alertBanner: { fontSize: 11, fontWeight: 700, color: '#4A5B8A', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 10, padding: '3px 8px', background: 'rgba(139,159,212,0.15)', borderRadius: 4, display: 'inline-block' },
