@@ -305,7 +305,7 @@ function getAvatarClass(team) {
 }
 
 const styles = {
-  page: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#F5F8FA' },
+  page: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 0, background: '#F5F8FA' },
   channelBar: { background: '#fff', borderBottom: '1px solid rgba(123,184,212,0.25)', flexShrink: 0 },
   channelList: { display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' },
   channelTab: { background: 'none', border: '1.5px solid rgba(123,184,212,0.3)', borderRadius: 20, padding: '5px 13px', fontSize: 13, fontWeight: 600, color: '#4A6B8A', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Lato, sans-serif', transition: 'all 0.15s', flexShrink: 0 },
@@ -319,7 +319,7 @@ const styles = {
   textarea: { flex: 1, border: '1.5px solid rgba(123,184,212,0.35)', borderRadius: 10, padding: '10px 12px', fontSize: 15, fontFamily: 'Lato, sans-serif', resize: 'none', outline: 'none', color: '#2C3E50', background: '#FAFCFE', lineHeight: 1.5 },
   composeFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingLeft: 46 },
   charCount: { fontSize: 12, color: '#8DA4B4' },
-  feed: { flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 },
+  feed: { flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', WebkitOverflowScrolling: 'touch', minHeight: 0 },
   postCard: { background: '#fff', borderRadius: 14, border: '1px solid rgba(123,184,212,0.18)', boxShadow: '0 2px 8px rgba(74,107,138,0.06)', padding: '14px 16px', overflow: 'hidden' },
   pinnedCard: { border: '1px solid rgba(123,184,212,0.4)', background: '#F8FBFE' },
   alertCard: { border: '1px solid rgba(139,159,212,0.5)', background: 'linear-gradient(135deg, #F0F4FF 0%, #F8FBFE 100%)' },
