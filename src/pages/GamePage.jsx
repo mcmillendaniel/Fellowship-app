@@ -319,7 +319,7 @@ function TasksSection() {
         task_id: task.id, user_id: user.id, photo_url: publicUrl, status: 'pending', stars_awarded: 0,
       })
       await loadData()
-      toast('\ud83d\udcf8 Submitted! Awaiting admin approval.', 'success')
+      toast('📸 Submitted! Awaiting admin approval.', 'success')
     } catch (e) { toast('Upload failed. Try again.', 'error') }
     setUploading(null)
   }
@@ -330,7 +330,7 @@ function TasksSection() {
         task_id: task.id, user_id: user.id, photo_url: null, status: 'pending', stars_awarded: 0,
       })
       await loadData()
-      toast('\u2705 Marked complete! Awaiting admin approval.', 'success')
+      toast('✅ Marked complete! Awaiting admin approval.', 'success')
     } catch (e) { toast('Something went wrong. Try again.', 'error') }
   }
 
@@ -340,7 +340,7 @@ function TasksSection() {
 
   if (!visibleTasks.length) return (
     <div style={centerStyle}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>\ud83d\uddfa\ufe0f</div>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
       <p style={{ fontWeight: 700, color: '#4A6B8A', fontSize: 16 }}>No quests nearby</p>
       <p style={{ color: '#888', fontSize: 14, maxWidth: 260, lineHeight: 1.5 }}>
         Update your location to see if any quests are available!
@@ -356,7 +356,7 @@ function TasksSection() {
           )
         }}
       >
-        \ud83d\udccd Refresh Location
+        📍 Refresh Location
       </button>
     </div>
   )
@@ -370,21 +370,21 @@ function TasksSection() {
           <div key={task.id} style={{ ...cardStyle, borderLeft: `4px solid ${sub ? (sub.status === 'approved' ? '#4CAF50' : '#FF9800') : '#7BB8D4'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
               <p style={{ ...qText, margin: 0 }}>{task.title}</p>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', whiteSpace: 'nowrap', marginLeft: 8 }}>{'\u2b50'.repeat(task.stars)}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', whiteSpace: 'nowrap', marginLeft: 8 }}>{'⭐'.repeat(task.stars)}</span>
             </div>
             {task.geofence_location && (
               <p style={{ fontSize: 11, color: '#7BB8D4', fontWeight: 600, margin: '2px 0 8px', letterSpacing: '0.3px' }}>
-                \ud83d\udccd {task.geofence_location}
+                📍 {task.geofence_location}
               </p>
             )}
             {task.description && <p style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>{task.description}</p>}
             {sub ? (
               <div style={{ fontSize: 13, color: sub.status === 'approved' ? '#4CAF50' : '#FF9800', fontWeight: 600 }}>
-                {sub.status === 'approved' ? `\u2705 Approved! +${sub.stars_awarded}\u2b50` : '\u23f3 Pending review'}
+                {sub.status === 'approved' ? `✅ Approved! +${sub.stars_awarded}⭐` : '⏳ Pending review'}
               </div>
             ) : requiresPhoto ? (
               <label style={{ ...startBtn, display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
-                {uploading === task.id ? 'Uploading...' : '\ud83d\udcf8 Submit Photo'}
+                {uploading === task.id ? 'Uploading...' : '📸 Submit Photo'}
                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                   onChange={e => handlePhoto(task, e.target.files[0])} />
               </label>
@@ -394,7 +394,7 @@ function TasksSection() {
                 onClick={() => handleMarkComplete(task)}
                 disabled={uploading === task.id}
               >
-                \u2714 Mark Completed
+                ✔ Mark Completed
               </button>
             )}
           </div>
