@@ -237,7 +237,42 @@ function QuestionCard({ question, existing, onAnswered, user }) {
   )
 }
 
-// ─── Tasks Section (unchanged) ───────────────────────────────────────────────
+
+const LOCATION_COORDS = {
+  'Green Man Brewing':        { lat: 35.5672, lng: -82.5547, type: 'tight' },
+  'Wicked Weed Funkatorium':  { lat: 35.5657, lng: -82.5564, type: 'tight' },
+  'New Belgium Brewing':      { lat: 35.5760, lng: -82.5807, type: 'tight' },
+  'Burial Beer':              { lat: 35.5658, lng: -82.5541, type: 'tight' },
+  'Hi-Wire Brewing':          { lat: 35.5664, lng: -82.5540, type: 'tight' },
+  'Twin Leaf Brewing':        { lat: 35.5660, lng: -82.5562, type: 'tight' },
+  'DSSOLVR':                  { lat: 35.5793, lng: -82.5573, type: 'tight' },
+  'One World Brewing':        { lat: 35.5751, lng: -82.5565, type: 'tight' },
+  'Level 256 Arcade Bar':     { lat: 35.5663, lng: -82.5548, type: 'tight' },
+  'Honeypot Vintage':         { lat: 35.5794, lng: -82.5572, type: 'tight' },
+  'Lexington Park Antiques':  { lat: 35.5772, lng: -82.5559, type: 'tight' },
+  'Lexington Ave Corridor':   { lat: 35.5793, lng: -82.5573, type: 'large' },
+  'Pack Square/Downtown Asheville': { lat: 35.5752, lng: -82.5541, type: 'city' },
+  'River Arts District':      { lat: 35.5760, lng: -82.5820, type: 'large' },
+}
+
+const GEOFENCE_RADIUS = { tight: 20, large: 75, city: 5000 }
+
+function getDistanceMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+}
+
+function isInGeofence(task, userLat, userLng) {
+  if (!task.geofence_location || !userLat || !userLng) return false
+  const loc = LOCATION_COORDS[task.geofence_location]
+  if (!loc) return false
+  const type = task.geofence_type || loc.type || 'tight'
+  const radius = GEOFENCE_RADIUS[type] ?? 20
+  return getDistanceMeters(userLat, userLng, loc.lat, loc.lng) <= radius
+}
 
 function TasksSection() {
   const { user } = useAuth()
@@ -246,8 +281,18 @@ function TasksSection() {
   const [submissions, setSubmissions] = useState({})
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(null)
+  const [userLat, setUserLat] = useState(null)
+  const [userLng, setUserLng] = useState(null)
+  const [locLoading, setLocLoading] = useState(true)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    navigator.geolocation?.getCurrentPosition(
+      pos => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); setLocLoading(false) },
+      () => setLocLoading(false),
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }, [])
 
   const loadData = async () => {
     const [{ data: taskData }, { data: subData }] = await Promise.all([
@@ -271,49 +316,86 @@ function TasksSection() {
       if (upErr) throw upErr
       const { data: { publicUrl } } = supabase.storage.from('quest-photos').getPublicUrl(path)
       await supabase.from('task_submissions').insert({
-        task_id: task.id,
-        user_id: user.id,
-        photo_url: publicUrl,
-        status: 'pending',
-        stars_awarded: 0,
+        task_id: task.id, user_id: user.id, photo_url: publicUrl, status: 'pending', stars_awarded: 0,
       })
       await loadData()
-      toast('📸 Submitted! Awaiting admin approval.', 'success')
-    } catch (e) {
-      toast('Upload failed. Try again.', 'error')
-    }
+      toast('\ud83d\udcf8 Submitted! Awaiting admin approval.', 'success')
+    } catch (e) { toast('Upload failed. Try again.', 'error') }
     setUploading(null)
   }
 
-  if (loading) return <div style={centerStyle}><div className="spinner" /></div>
-  if (!tasks.length) return (
+  const handleMarkComplete = async (task) => {
+    try {
+      await supabase.from('task_submissions').insert({
+        task_id: task.id, user_id: user.id, photo_url: null, status: 'pending', stars_awarded: 0,
+      })
+      await loadData()
+      toast('\u2705 Marked complete! Awaiting admin approval.', 'success')
+    } catch (e) { toast('Something went wrong. Try again.', 'error') }
+  }
+
+  if (loading || locLoading) return <div style={centerStyle}><div className="spinner" /></div>
+
+  const visibleTasks = tasks.filter(t => isInGeofence(t, userLat, userLng))
+
+  if (!visibleTasks.length) return (
     <div style={centerStyle}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
-      <p style={{ fontWeight: 700, color: '#4A6B8A' }}>Quests coming soon</p>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>\ud83d\uddfa\ufe0f</div>
+      <p style={{ fontWeight: 700, color: '#4A6B8A', fontSize: 16 }}>No quests nearby</p>
+      <p style={{ color: '#888', fontSize: 14, maxWidth: 260, lineHeight: 1.5 }}>
+        Update your location to see if any quests are available!
+      </p>
+      <button
+        style={{ ...startBtn, marginTop: 16, width: 'auto', padding: '10px 24px' }}
+        onClick={() => {
+          setLocLoading(true)
+          navigator.geolocation?.getCurrentPosition(
+            pos => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); setLocLoading(false) },
+            () => setLocLoading(false),
+            { enableHighAccuracy: true, timeout: 8000 }
+          )
+        }}
+      >
+        \ud83d\udccd Refresh Location
+      </button>
     </div>
   )
 
   return (
     <div style={{ padding: '16px', paddingBottom: 80 }}>
-      {tasks.map(task => {
+      {visibleTasks.map(task => {
         const sub = submissions[task.id]
+        const requiresPhoto = task.requires_photo === true || task.requires_photo === 'TRUE'
         return (
           <div key={task.id} style={{ ...cardStyle, borderLeft: `4px solid ${sub ? (sub.status === 'approved' ? '#4CAF50' : '#FF9800') : '#7BB8D4'}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
               <p style={{ ...qText, margin: 0 }}>{task.title}</p>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', whiteSpace: 'nowrap', marginLeft: 8 }}>{'⭐'.repeat(task.stars)}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A6B8A', whiteSpace: 'nowrap', marginLeft: 8 }}>{'\u2b50'.repeat(task.stars)}</span>
             </div>
+            {task.geofence_location && (
+              <p style={{ fontSize: 11, color: '#7BB8D4', fontWeight: 600, margin: '2px 0 8px', letterSpacing: '0.3px' }}>
+                \ud83d\udccd {task.geofence_location}
+              </p>
+            )}
             {task.description && <p style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>{task.description}</p>}
             {sub ? (
               <div style={{ fontSize: 13, color: sub.status === 'approved' ? '#4CAF50' : '#FF9800', fontWeight: 600 }}>
-                {sub.status === 'approved' ? `✅ Approved! +${sub.stars_awarded}⭐` : '⏳ Pending review'}
+                {sub.status === 'approved' ? `\u2705 Approved! +${sub.stars_awarded}\u2b50` : '\u23f3 Pending review'}
               </div>
-            ) : (
+            ) : requiresPhoto ? (
               <label style={{ ...startBtn, display: 'inline-block', cursor: 'pointer', textAlign: 'center' }}>
-                {uploading === task.id ? 'Uploading...' : '📸 Submit Photo'}
+                {uploading === task.id ? 'Uploading...' : '\ud83d\udcf8 Submit Photo'}
                 <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                   onChange={e => handlePhoto(task, e.target.files[0])} />
               </label>
+            ) : (
+              <button
+                style={startBtn}
+                onClick={() => handleMarkComplete(task)}
+                disabled={uploading === task.id}
+              >
+                \u2714 Mark Completed
+              </button>
             )}
           </div>
         )
