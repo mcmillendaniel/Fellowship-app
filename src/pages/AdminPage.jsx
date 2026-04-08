@@ -140,7 +140,7 @@ function TasksTab() {
   useEffect(() => { fetchTasks() }, [])
 
   const fetchTasks = async () => {
-    const { data } = await supabase.from('tasks').select('*').order('stars')
+    const { data } = await supabase.from('fellowship_quests').select('*').order('stars')
     setTasks(data || [])
     setLoading(false)
   }
@@ -148,7 +148,7 @@ function TasksTab() {
   const save = async () => {
     if (!form.title.trim()) return
     setSaving(true)
-    await supabase.from('tasks').insert({ title: form.title.trim(), description: form.description.trim(), stars: form.stars })
+    await supabase.from('fellowship_quests').insert({ title: form.title.trim(), description: form.description.trim(), stars: form.stars })
     setForm({ title: '', description: '', stars: 1 })
     await fetchTasks()
     toast('Quest added!', 'success')
@@ -156,7 +156,7 @@ function TasksTab() {
   }
 
   const remove = async (id) => {
-    await supabase.from('tasks').delete().eq('id', id)
+    await supabase.from('fellowship_quests').delete().eq('id', id)
     setTasks(t => t.filter(x => x.id !== id))
     toast('Quest removed', 'info')
   }

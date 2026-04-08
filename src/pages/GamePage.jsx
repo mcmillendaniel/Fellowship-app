@@ -251,7 +251,7 @@ function TasksSection() {
 
   const loadData = async () => {
     const [{ data: taskData }, { data: subData }] = await Promise.all([
-      supabase.from('tasks').select('*').order('stars', { ascending: true }),
+      supabase.from('fellowship_quests').select('*').order('stars', { ascending: true }),
       supabase.from('task_submissions').select('*').eq('user_id', user.id)
     ])
     setTasks(taskData || [])
