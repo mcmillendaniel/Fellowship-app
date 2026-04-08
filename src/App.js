@@ -39,7 +39,7 @@ function AppInner() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <Header title="The Fellowship" />
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {page === 'wall' && <WallPage />}
         {page === 'map' && <MapPage />}
         {page === 'game' && <GamePage />}
