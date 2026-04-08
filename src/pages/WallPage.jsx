@@ -305,7 +305,7 @@ function getAvatarClass(team) {
 }
 
 const styles = {
-  page: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 0, background: '#F5F8FA' },
+  page: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', flex: 1, minHeight: 0, background: '#F5F8FA' },
   channelBar: { background: '#fff', borderBottom: '1px solid rgba(123,184,212,0.25)', flexShrink: 0 },
   channelList: { display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' },
   channelTab: { background: 'none', border: '1.5px solid rgba(123,184,212,0.3)', borderRadius: 20, padding: '5px 13px', fontSize: 13, fontWeight: 600, color: '#4A6B8A', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Lato, sans-serif', transition: 'all 0.15s', flexShrink: 0 },
